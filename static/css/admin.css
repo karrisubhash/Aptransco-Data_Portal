@@ -1,0 +1,134 @@
+/* ==========================================================================
+   APTRANSCO — Django admin theme
+   Rebrands the stock admin to match the portal's "transmission blue" identity.
+   Overrides Django 6 admin CSS custom properties (loaded after base.css /
+   dark_mode.css, so these win) and adds a few chrome refinements. Django's own
+   light/dark body theming is left intact.
+   ========================================================================== */
+
+:root,
+html[data-theme="light"],
+html[data-theme="dark"],
+html[data-theme="auto"] {
+  --primary: #1a4d8f;
+  --secondary: #13315c;
+  --accent: #38bdf8;
+
+  --header-color: #eaf2ff;
+  --header-branding-color: #ffffff;
+  --header-bg: #0b2545;
+  --header-link-color: #eaf2ff;
+
+  --breadcrumbs-fg: #c7d8f1;
+  --breadcrumbs-link-fg: #eaf2ff;
+  --breadcrumbs-bg: #13315c;
+
+  --link-fg: #1a4d8f;
+  --link-hover-color: #0b2545;
+  --link-selected-fg: #13315c;
+
+  --button-fg: #fff;
+  --button-bg: #1a4d8f;
+  --button-hover-bg: #13315c;
+  --default-button-bg: #2563eb;
+  --default-button-hover-bg: #1a4d8f;
+
+  --object-tools-fg: #fff;
+  --object-tools-bg: #13315c;
+  --object-tools-hover-bg: #0b2545;
+
+  --font-family-primary:
+    "Inter", "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ----------------------------------------------------------------- header */
+#header {
+  background: linear-gradient(100deg, #0b2545 0%, #13315c 55%, #1a4d8f 100%);
+  box-shadow: 0 2px 18px rgba(11, 37, 69, .25);
+  padding: 14px 40px;
+}
+#site-name {
+  font-weight: 800;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+#site-name a:link, #site-name a:visited { color: #fff; }
+#site-name a { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+#site-name .admin-brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  object-fit: contain;
+}
+#site-name .brand-tag {
+  flex-basis: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(199, 216, 241, .8);
+  margin-top: 2px;
+}
+
+/* ------------------------------------------------------------ breadcrumbs */
+div.breadcrumbs {
+  padding: 12px 40px;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------- buttons */
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  border-radius: 9px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(26, 77, 143, .18);
+  transition: background .15s ease, box-shadow .15s ease, transform .1s ease;
+}
+.button:active, input[type=submit]:active { transform: translateY(1px); }
+.object-tools a {
+  border-radius: 9px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.submit-row { border-radius: 12px; }
+
+/* ---------------------------------------------------------------- modules */
+.module {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .08);
+}
+.module caption,
+.module h2, .module caption, .inline-group h2 {
+  letter-spacing: .04em;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------- form inputs */
+input[type=text], input[type=password], input[type=email], input[type=url],
+input[type=number], input[type=tel], textarea, select, .vTextField {
+  border-radius: 9px;
+  border: 1px solid #cbd5e1;
+}
+input:focus, textarea:focus, select:focus, .vTextField:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+  outline: 0;
+}
+
+/* ---------------------------------------------------------- login screen */
+body.login #container {
+  border-radius: 16px;
+  box-shadow: 0 18px 40px -12px rgba(13, 38, 76, .28);
+  border: 1px solid #e3e8f0;
+  overflow: hidden;
+}
+body.login #header { border-radius: 0; }
+body.login .submit-row input { width: 100%; }
+
+/* ---------------------------------------------------------- dashboard list */
+.dashboard #content-main .module table th { font-weight: 600; }
+#content-related .module h2 { letter-spacing: .02em; }

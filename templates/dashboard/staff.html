@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · APTRANSCO Portal{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Administration</div>
+    <h3>Review Dashboard</h3>
+    <p class="lead-sub">Monitor collection activity and clear the inspection review queue.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-outline-secondary"></i> Manage Data</a>
+    <a href="{% url 'reports' %}" class="btn btn-primary"><i class="bi bi-box-arrow-down me-1"></i> Export datasets</a>
+  </div>
+</div>
+
+{# ---- KPI stat cards ---- #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-ico ico-brand"><i class="bi bi-clipboard-data fs-5"></i></div>
+      <div class="stat-value">{{ total_inspections }}</div>
+      <div class="stat-label">Inspections</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-ico ico-accent"><i class="bi bi-images fs-5"></i></div>
+      <div class="stat-value">{{ total_images }}</div>
+      <div class="stat-label">Images</div>
+    </div>
+  </div>
+  {% for label, n in by_status %}
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-ico {% if label == 'Approved' %}ico-green{% elif label == 'Submitted' %}ico-amber{% elif label == 'Rejected' %}ico-red{% else %}ico-slate{% endif %}">
+        <i class="bi {% if label == 'Approved' %}bi-check2-circle{% elif label == 'Submitted' %}bi-hourglass-split{% elif label == 'Rejected' %}bi-x-circle{% else %}bi-pencil-square{% endif %} fs-5"></i>
+      </div>
+      <div class="stat-value">{{ n }}</div>
+      <div class="stat-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ---- Breakdown panels ---- #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2"><i class="bi bi-diagram-3 text-primary"></i> Images by category</div>
+      <ul class="list-group list-group-flush">
+        {% for row in by_category %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="label-soft text-truncate me-2">{{ row.subcategory__category__name|default:'—' }}</span>
+          <span class="count-pill">{{ row.n }}</span>
+        </li>
+        {% empty %}<li class="list-group-item text-muted">No images yet.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2"><i class="bi bi-reception-4 text-primary"></i> Top transmission lines</div>
+      <ul class="list-group list-group-flush">
+        {% for row in top_lines %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="label-soft text-truncate me-2">{{ row.transmission_line__line_name }}</span>
+          <span class="count-pill">{{ row.n }}</span>
+        </li>
+        {% empty %}<li class="list-group-item text-muted">No inspections yet.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2"><i class="bi bi-person-badge text-primary"></i> By uploader</div>
+      <ul class="list-group list-group-flush">
+        {% for row in by_user %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="d-flex align-items-center gap-2 text-truncate me-2">
+            <span class="avatar-sm">{{ row.uploaded_by__username|slice:":1"|upper }}</span>
+            <span class="label-soft text-truncate">{{ row.uploaded_by__username }}</span>
+          </span>
+          <span class="count-pill">{{ row.n }}</span>
+        </li>
+        {% empty %}<li class="list-group-item text-muted">No inspections yet.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+{# ---- Review queue ---- #}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="d-flex align-items-center gap-2">
+      <i class="bi bi-hourglass-split text-warning"></i>
+      Awaiting review
+      {% if pending.paginator.count %}<span class="count-pill">{{ pending.paginator.count }}</span>{% endif %}
+    </span>
+    <a href="{% url 'reports' %}" class="btn btn-sm btn-outline-primary">Export approved <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-cards table-hover align-middle m-0">
+      <thead>
+        <tr><th>S.No.</th><th>Line</th><th>Location</th><th>By</th><th>Images</th><th>Created</th><th class="text-end">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for insp in pending %}
+        <tr class="row-link" data-href="{% url 'inspection_detail' insp.id %}" style="cursor:pointer;">
+          <td class="text-muted cell-hide" data-label="S.No.">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+          <td class="text-truncate cell-title" style="max-width:240px" data-label="Line">{{ insp.transmission_line }}</td>
+          <td data-label="Location"><span class="badge bg-light text-dark border">{{ insp.location_id }}</span></td>
+          <td data-label="By">{{ insp.uploaded_by.get_username }}</td>
+          <td data-label="Images"><span class="count-pill">{{ insp.image_count }}</span></td>
+          <td class="text-muted" data-label="Created">{{ insp.created_at|date:"d M Y, H:i" }}</td>
+          <td class="text-end cell-actions">
+            <div class="d-inline-flex gap-1 align-items-center">
+              <a href="{% url 'inspection_detail' insp.id %}" class="btn btn-sm btn-outline-secondary">View <i class="bi bi-chevron-right"></i></a>
+              <form method="post" action="{% url 'review_inspection' insp.id %}" class="d-inline-flex gap-1 m-0">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button name="action" value="approve" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> Approve</button>
+                <button name="action" value="reject" class="btn btn-danger btn-sm"><i class="bi bi-x-lg"></i> Reject</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="cell-full">
+          <div class="empty-state">
+            <div class="empty-ico"><i class="bi bi-check2-all"></i></div>
+            <h6 class="mb-1">Queue is clear</h6>
+            <div>Nothing is awaiting review right now.</div>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pending.paginator.num_pages > 1 %}
+  <div class="card-footer">{% include 'partials/_pagination.html' with page_obj=pending %}</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Whole "awaiting review" row is clickable, but clicks on the Approve/Reject
+  // buttons (and any link) keep doing their own thing.
+  document.querySelectorAll('tr.row-link').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('a, button, input, select, label, form')) return;
+      window.location = row.dataset.href;
+    });
+  });
+</script>
+{% endblock %}

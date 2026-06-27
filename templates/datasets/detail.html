@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Inspection #{{ inspection.id }} · APTRANSCO Portal{% endblock %}
+{% block content %}
+<a href="{% if user.is_staff %}{% url 'staff_dashboard' %}{% else %}{% url 'my_inspections' %}{% endif %}" class="btn btn-link px-0 mb-2"><i class="bi bi-arrow-left me-1"></i> Back</a>
+
+<div class="page-head mb-3">
+  <div>
+    <div class="eyebrow">Inspection record</div>
+    <h3 class="d-flex align-items-center gap-3">
+      Inspection #{{ inspection.id }}
+      <span class="status-badge status-{{ inspection.status }} fs-6">{{ inspection.get_status_display }}</span>
+    </h3>
+  </div>
+</div>
+
+{% if user.is_staff and inspection.status == 'submitted' %}
+<div class="alert alert-warning d-flex align-items-center flex-wrap gap-2">
+  <i class="bi bi-hourglass-split fs-5"></i>
+  <span class="me-auto fw-semibold">This inspection is awaiting your review.</span>
+  <form method="post" action="{% url 'review_inspection' inspection.id %}" class="m-0 d-flex gap-2">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button name="action" value="approve" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> Approve</button>
+    <button name="action" value="reject" class="btn btn-danger btn-sm"><i class="bi bi-x-lg"></i> Reject</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2"><i class="bi bi-card-list text-primary"></i> Details</div>
+  <div class="card-body">
+    <dl class="row mb-0 detail-grid">
+      <dt class="col-sm-3">Transmission Line</dt><dd class="col-sm-9">{{ inspection.transmission_line }}</dd>
+      <dt class="col-sm-3">Location ID</dt><dd class="col-sm-9"><span class="badge bg-light text-dark border">{{ inspection.location_id }}</span></dd>
+      <dt class="col-sm-3">Uploaded by</dt><dd class="col-sm-9">{{ inspection.uploaded_by.get_username }}</dd>
+      <dt class="col-sm-3">Created</dt><dd class="col-sm-9">{{ inspection.created_at|date:"d M Y, H:i" }}</dd>
+      {% if inspection.remarks %}
+      <dt class="col-sm-3">Remarks</dt><dd class="col-sm-9">{{ inspection.remarks }}</dd>
+      {% endif %}
+    </dl>
+  </div>
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-images text-primary fs-5"></i>
+  <h5 class="m-0">Inspection imagery</h5>
+</div>
+
+{% for category, subs in grouped.items %}
+<div class="card mb-3">
+  <div class="card-header text-uppercase section-title">{{ category }}</div>
+  <div class="card-body">
+    {% for sub, images in subs.items %}
+    <div class="mb-4">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="fw-semibold">{{ sub }}</span>
+        <span class="count-pill">{{ images|length }}</span>
+      </div>
+      <div class="row g-2">
+        {% for img in images %}
+        <div class="col-6 col-md-3 col-lg-2">
+          <a href="{{ img.image.url }}" target="_blank" rel="noopener">
+            <img src="{{ img.image.url }}" class="gallery-img" loading="lazy" alt="{{ sub }}">
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% empty %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <div class="empty-ico"><i class="bi bi-image"></i></div>
+      <h6 class="mb-1">No images</h6>
+      <div>This inspection has no images attached.</div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,40 @@
+# --- Secrets & environment ---
+
+
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Django ---
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+
+# Uploaded datasets — large binary data, not source. Keep the folder, ignore contents.
+
+
+
+# --- Tooling / IDE ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/

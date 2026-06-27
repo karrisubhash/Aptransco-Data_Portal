@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}My Inspections · APTRANSCO Portal{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Field Inspector</div>
+    <h3>My Inspections</h3>
+    <p class="lead-sub">Track the status of every inspection you have submitted.</p>
+  </div>
+  <a href="{% url 'upload' %}" class="btn btn-primary btn-lg"><i class="bi bi-plus-lg me-1"></i> New Inspection</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-lg-6">
+        <label class="form-label">Search</label>
+        <div class="input-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by transmission line or location…">
+        </div>
+      </div>
+      <div class="col-12 col-sm-8 col-lg-3">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">All statuses</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-sm-4 col-lg-3 d-flex gap-2">
+        <button class="btn btn-primary flex-fill" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+        <a href="{% url 'my_inspections' %}" class="btn btn-outline-secondary" title="Clear filters"><i class="bi bi-x-circle"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-cards table-hover align-middle m-0">
+      <thead>
+        <tr>
+          <th>S.No.</th>
+          <th>Transmission Line</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Images</th>
+          <th>Created</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for insp in inspections %}
+        <tr class="row-link" data-href="{% url 'inspection_detail' insp.id %}" style="cursor:pointer;">
+          <td class="text-muted cell-hide" data-label="S.No.">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+          <td class="cell-title" data-label="Transmission Line"><a href="{% url 'inspection_detail' insp.id %}" class="fw-semibold">{{ insp.transmission_line }}</a></td>
+          <td data-label="Location"><span class="badge bg-light text-dark border">{{ insp.location_id }}</span></td>
+          <td data-label="Status"><span class="status-badge status-{{ insp.status }}">{{ insp.get_status_display }}</span></td>
+          <td data-label="Images"><span class="count-pill">{{ insp.image_count }}</span></td>
+          <td class="text-muted" data-label="Created">{{ insp.created_at|date:"d M Y, H:i" }}</td>
+          <td class="text-end cell-hide">
+            <a href="{% url 'inspection_detail' insp.id %}" class="btn btn-sm btn-outline-secondary">View <i class="bi bi-chevron-right"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="cell-full">
+            <div class="empty-state">
+              <div class="empty-ico"><i class="bi bi-inbox"></i></div>
+              {% if q or status %}
+                <h6 class="mb-1">No matches</h6>
+                <div>No inspections match your current filter.</div>
+                <a href="{% url 'my_inspections' %}" class="btn btn-sm btn-outline-secondary mt-3">Clear filter</a>
+              {% else %}
+                <h6 class="mb-1">No inspections yet</h6>
+                <div>Start by creating your first inspection.</div>
+                <a href="{% url 'upload' %}" class="btn btn-primary mt-3"><i class="bi bi-plus-lg me-1"></i> New Inspection</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="card-footer">{% include 'partials/_pagination.html' %}</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Make each inspection row clickable, while leaving real links/buttons
+  // (and keyboard navigation via those links) working normally.
+  document.querySelectorAll('tr.row-link').forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('a, button, input, select, label')) return;
+      window.location = row.dataset.href;
+    });
+  });
+</script>
+{% endblock %}

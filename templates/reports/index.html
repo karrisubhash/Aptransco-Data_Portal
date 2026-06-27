@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Dataset Export · APTRANSCO Portal{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Reports</div>
+    <h3>Dataset Export</h3>
+    <p class="lead-sub">
+      ZIP archives contain images from <strong>Approved</strong> inspections only,
+      organized by subcategory folder — ready for AI model training.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2 text-muted">
+    <span class="status-badge status-approved">Approved only</span>
+  </div>
+</div>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-box-seam text-primary fs-5"></i>
+  <h5 class="m-0">Image archives by category</h5>
+</div>
+
+<div class="row g-3 mb-4">
+  {% for cat in categories %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card card-hover h-100">
+      <div class="card-body d-flex flex-column">
+        <div class="d-flex align-items-start justify-content-between mb-2">
+          <div class="stat-ico ico-brand"><i class="bi bi-folder-fill fs-5"></i></div>
+          <span class="count-pill">{{ cat.approved_images }}</span>
+        </div>
+        <h5 class="card-title mb-1">{{ cat.name }}</h5>
+        <p class="text-muted mb-3">{{ cat.approved_images }} approved image{{ cat.approved_images|pluralize }} ready to export</p>
+        <a href="{% url 'export_category_zip' cat.id %}"
+           class="btn btn-primary mt-auto {% if not cat.approved_images %}disabled{% endif %}">
+          <i class="bi bi-download me-1"></i> Download {{ cat.name|lower }}s.zip
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card"><div class="card-body">
+      <div class="empty-state">
+        <div class="empty-ico"><i class="bi bi-folder-x"></i></div>
+        <h6 class="mb-1">No categories defined</h6>
+        <div>Seed the taxonomy to enable exports.</div>
+      </div>
+    </div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center gap-2"><i class="bi bi-table text-primary"></i> Metadata</div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <p class="mb-1 fw-semibold">Full image inventory</p>
+        <p class="text-muted mb-0">
+          All {{ total_images }} image{{ total_images|pluralize }}
+          ({{ approved_images }} approved), one row each, with a status column.
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'export_metadata_csv' %}" class="btn btn-outline-secondary"><i class="bi bi-filetype-csv me-1"></i> CSV</a>
+        <a href="{% url 'export_metadata_xlsx' %}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-excel me-1"></i> Excel</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
