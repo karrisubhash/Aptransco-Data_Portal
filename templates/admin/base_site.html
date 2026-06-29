@@ -8,6 +8,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+  <script>
+    document.documentElement.dataset.theme = "light";
+    try { localStorage.setItem("theme", "light"); } catch (e) {}
+  </script>
 {% endblock %}
 
 {% block branding %}
@@ -18,7 +22,4 @@
     <span class="brand-tag">Inspection Dataset Portal</span>
   </a>
 </div>
-{% if user.is_anonymous %}
-  {% include "admin/color_theme_toggle.html" %}
-{% endif %}
 {% endblock %}

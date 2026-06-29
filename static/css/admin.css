@@ -6,6 +6,8 @@
    light/dark body theming is left intact.
    ========================================================================== */
 
+/* Theme is pinned to light in base_site.html; only :root / [data-theme=light]
+   need styling, but dark/auto selectors stay in case the pin is ever lifted. */
 :root,
 html[data-theme="light"],
 html[data-theme="dark"],
@@ -40,6 +42,9 @@ html[data-theme="auto"] {
   --font-family-primary:
     "Inter", "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
+
+/* Theme is pinned to light (see base_site.html) — hide the now-inert toggle. */
+.theme-toggle { display: none !important; }
 
 /* ----------------------------------------------------------------- header */
 #header {
