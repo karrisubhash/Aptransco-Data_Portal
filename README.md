@@ -123,9 +123,6 @@ python manage.py test
 
 49 tests cover path and dedupe utilities, the upload flow (including duplicate rejection), access control, the review lifecycle and dataset export.
 
-## Screenshots
-
-<!-- TODO(Subhash): add screenshots of the upload form and staff dashboard (no real tower data) -->
 
 ## Future improvements
 
