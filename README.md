@@ -7,7 +7,8 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](#)
 [![Tests](https://img.shields.io/badge/tests-49-success)](#testing)
 
-**Context:** built during my AI/ML internship at APTRANSCO (May–Jul 2026). Deployment target: a Windows server running Waitress behind a TLS reverse proxy.
+**🔗 Live:** https://dataportal.aptransco.co.in/ (deployed on APTRANSCO's domain; sign-in required)<br/>
+**Context:** built during my AI/ML internship at APTRANSCO (May–Jul 2026).
 
 > Full design rationale and decision log: [ARCHITECTURE.md](ARCHITECTURE.md)
 
