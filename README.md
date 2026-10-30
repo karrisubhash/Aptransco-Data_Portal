@@ -1,155 +1,134 @@
-# APTRANSCO Transmission Dataset Collection Portal
+# APTRANSCO Transmission Inspection Dataset Portal
 
-A Django web portal that centralizes APTRANSCO transmission-line inspection
-images (drone + field) so the data collected for **AI-based transmission line
-inspection** is organized, searchable, **deduplicated**, and ready for model
-training (YOLO, segmentation, etc.).
+> A Django + PostgreSQL portal that turns scattered drone and field photos of transmission lines into a **clean, deduplicated, reviewed ML training dataset**. It feeds the YOLO models behind APTRANSCO's [AI drone inspection system](https://github.com/karrisubhash/Aptransco-Drone).
 
-> Full design rationale and decision log live in [ARCHITECTURE.md](ARCHITECTURE.md).
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](#)
+[![Django](https://img.shields.io/badge/Django-6.0-092E20?logo=django&logoColor=white)](#)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](#)
+[![Tests](https://img.shields.io/badge/tests-49-success)](#testing)
+
+**Context:** built during my AI/ML internship at APTRANSCO (May–Jul 2026). Deployment target: a Windows server running Waitress behind a TLS reverse proxy.
+
+> Full design rationale and decision log: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
+
+## Problem
+
+Training defect-detection models needs thousands of labelled images. Before this portal, the images sat in personal folders and WhatsApp exports. The same photo was saved several times under different names, nothing was tied to a line or tower, and nobody could tell which images had been checked. Every training run began with days of manual cleanup.
 
 ## What it does
 
-- **Imports** the APTRANSCO transmission-line master data from CSV (1,286 lines).
-- **Collects** inspection images through a single per-location upload form, with
-  a data-driven Component/Defect taxonomy (no hardcoded categories).
-- **Organizes** every image on disk under
-  `media/<line>/<location>/<Category>/<SubCategory>/` automatically.
-- **Deduplicates** uploads by content hash, so the same photo is never stored twice.
-- **Reviews** inspections through a Draft → Submitted → Approved/Rejected lifecycle.
-- **Exports** Approved-only, per-category ZIP datasets plus CSV/Excel metadata.
+- **Imports transmission-line master data** from CSV: 1,286 lines with voltage, circle and length.
+- **Collects images** through one per-location upload form. The Component → Defect taxonomy is data-driven, so new categories need no code change.
+- **Organises files on disk automatically** under `media/<line>/<location>/<Category>/<SubCategory>/`.
+- **Deduplicates by content**: every upload gets a SHA-256 checksum, so the same photo is never stored twice, whatever its file name. Management commands backfill checksums and report duplicates already on disk.
+- **Review workflow** with separate roles for collectors and staff: `Draft → Submitted → Approved / Rejected`.
+- **Exports training data**: one ZIP per category containing *approved images only*, plus CSV and Excel metadata.
+- **Production hardening**: env-driven settings, refuses to start without `DJANGO_SECRET_KEY` when `DEBUG=False`, WhiteNoise static files, and a `/healthz` probe that checks the DB.
 
-Regular users and staff get **separate areas** — collectors only see upload /
-"My Inspections"; staff get the dashboard, review queue, and export tools.
+## Architecture
 
----
+```mermaid
+flowchart LR
+    C[Field / drone collector] -->|upload form| UP[datasets app<br/>upload + SHA-256 dedupe]
+    UP --> FS[(media/line/location/<br/>Category/SubCategory)]
+    UP --> DB[(PostgreSQL)]
+    MD[masterdata app<br/>Category / SubCategory] --> UP
+    TL[transmission app<br/>CSV import · 1,286 lines] --> UP
+    S[Staff reviewer] -->|approve / reject| RV[dashboard app<br/>review queue]
+    RV --> DB
+    DB --> EX[reports app<br/>ZIP per category + CSV/XLSX]
+    EX --> ML[YOLO training]
+```
 
 ## Tech stack
 
-| Layer    | Technology                                              |
-|----------|---------------------------------------------------------|
-| Backend  | Python, Django 6.0                                      |
-| Database | PostgreSQL (`psycopg2-binary`)                          |
-| Frontend | HTML, Bootstrap 5, vanilla JS                           |
-| Imaging  | Pillow                                                  |
-| Import   | pandas / numpy                                          |
-| Export   | openpyxl (Excel), CSV, zipfile                          |
-| Static   | WhiteNoise (production)                                 |
+| Layer | Technology |
+|---|---|
+| Backend | Python, Django 6.0 |
+| Database | PostgreSQL (`psycopg2`) |
+| Frontend | Django templates, Bootstrap 5, vanilla JS |
+| Data | pandas (CSV import), Pillow, openpyxl (Excel export) |
+| Production | WhiteNoise, Waitress / Gunicorn behind a TLS reverse proxy |
 
----
+## Project structure
 
-## Quick start (development)
+```
+├── config/          # settings (env-driven), urls, wsgi/asgi, /healthz
+├── accounts/        # sign-up / login, role-based landing
+├── transmission/    # TransmissionLine model + import_transmission_data command
+├── masterdata/      # Category / SubCategory taxonomy + seed_masterdata command
+├── datasets/        # Inspection, InspectionImage, upload flow, checksum utils, dedupe commands
+├── dashboard/       # "My inspections" + staff review dashboard
+├── reports/         # ZIP / CSV / XLSX dataset export
+├── templates/  static/
+└── ARCHITECTURE.md
+```
+
+## Getting started
 
 ```bash
-# 1. Create & activate a virtual environment
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
-source .venv/bin/activate
-
-# 2. Install dependencies
+python -m venv .venv && source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-
-# 3. Configure environment (optional in dev — defaults work out of the box)
-cp .env.example .env        # then edit DB password etc.
-
-# 4. Create the PostgreSQL database (once)
-#    createdb data_portal   # or via pgAdmin / psql
-
-# 5. Apply migrations
+cp .env.example .env                                     # set DB credentials
+createdb data_portal
 python manage.py migrate
-
-# 6. Seed the Component/Defect taxonomy (idempotent)
-python manage.py seed_masterdata
-
-# 7. Import the transmission-line master data
-python manage.py import_transmission_data transmission_data.csv
-
-# 8. Create an admin user
+python manage.py seed_masterdata                         # idempotent taxonomy seed
+python manage.py import_transmission_data path/to/transmission_data.csv
 python manage.py createsuperuser
-
-# 9. Run the dev server
 python manage.py runserver
 ```
 
-Then open <http://127.0.0.1:8000/>. Log in; staff land on the admin dashboard,
-regular users on the upload page.
+Staff users land on the review dashboard; collectors land on the upload page.
 
----
+### Environment variables
 
-## Configuration
+| Variable | Purpose |
+|---|---|
+| `DJANGO_DEBUG` | `False` in production (enables security hardening) |
+| `DJANGO_SECRET_KEY` | Required when `DEBUG=False` |
+| `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` | Comma-separated |
+| `DJANGO_DB_NAME`, `DJANGO_DB_USER`, `DJANGO_DB_PASSWORD`, `DJANGO_DB_HOST`, `DJANGO_DB_PORT` | PostgreSQL |
+| `DJANGO_MEDIA_ROOT` | Image storage root |
+| `DJANGO_TIME_ZONE` | Defaults to `Asia/Kolkata` |
 
-All configuration is environment-driven — see [.env.example](.env.example) for
-the full list. The most important variables:
+## Routes
 
-| Variable                      | Purpose                                              |
-|-------------------------------|------------------------------------------------------|
-| `DJANGO_DEBUG`                | `False` in production (activates security hardening). |
-| `DJANGO_SECRET_KEY`           | **Required** when `DEBUG=False`.                     |
-| `DJANGO_ALLOWED_HOSTS`        | Comma-separated hostnames (required in production).  |
-| `DJANGO_DB_*`                 | PostgreSQL name/user/password/host/port.             |
-| `DJANGO_MEDIA_ROOT`           | Where uploaded images are stored.                    |
-| `DJANGO_TIME_ZONE`            | Defaults to `Asia/Kolkata`.                          |
-
-In development, with `DEBUG=True`, a deterministic insecure secret key is used so
-no setup is needed. With `DEBUG=False` the app refuses to start without a real
-`DJANGO_SECRET_KEY`.
-
----
+| Path | Who | Purpose |
+|---|---|---|
+| `/upload/` | collector | Per-location multi-image upload |
+| `/my-inspections/` | collector | Own submissions and their status |
+| `/staff/` | staff | Dashboard and review queue |
+| `/inspection/<id>/`, `/inspection/<id>/review/` | staff | Detail view, approve / reject |
+| `/reports/category/<id>/zip/` | staff | Approved-only dataset ZIP |
+| `/reports/metadata.csv`, `/reports/metadata.xlsx` | staff | Metadata export |
+| `/healthz` | ops | Liveness and DB check |
 
 ## Management commands
 
-| Command                                         | What it does                                  |
-|-------------------------------------------------|-----------------------------------------------|
-| `seed_masterdata`                               | Seed/refresh the Component/Defect taxonomy.   |
-| `import_transmission_data <csv>`                | Import transmission lines from the master CSV. |
-| `backfill_checksums`                            | Compute content hashes for pre-existing images. |
-| `find_duplicate_images`                         | Report images that share identical content.   |
+| Command | Purpose |
+|---|---|
+| `seed_masterdata` | Seed / refresh the Component / Defect taxonomy |
+| `import_transmission_data <csv>` | Import the line master data |
+| `backfill_checksums` | Compute SHA-256 for images uploaded before dedupe existed |
+| `find_duplicate_images` | Report images with identical content |
 
----
-
-## Running the tests
+## Testing
 
 ```bash
 python manage.py test
 ```
 
-The suite covers path/dedup utilities, the upload flow (including duplicate
-rejection), access control, the review lifecycle, and dataset export.
+49 tests cover path and dedupe utilities, the upload flow (including duplicate rejection), access control, the review lifecycle and dataset export.
 
----
+## Screenshots
 
-## Deployment (Milestone 7)
+<!-- TODO(Subhash): add screenshots of the upload form and staff dashboard (no real tower data) -->
 
-1. Set `DJANGO_DEBUG=False`, a strong `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
-   and `DJANGO_CSRF_TRUSTED_ORIGINS` in the server environment.
-2. `pip install -r requirements.txt` (installs WhiteNoise for static serving).
-3. `python manage.py collectstatic --noinput`
-4. `python manage.py migrate`
-5. Serve via a WSGI server behind TLS, e.g.
-   - Linux: `gunicorn config.wsgi:application`
-   - Windows: `waitress-serve --port=8000 config.wsgi:application`
-6. Put a reverse proxy (nginx / IIS) in front for TLS termination; it should set
-   `X-Forwarded-Proto: https` so the secure-cookie / SSL-redirect settings engage.
+## Future improvements
 
-A liveness/readiness probe is available at **`/healthz`** (checks DB connectivity).
-
----
-
-## Repository layout
-
-```
-data/                       # repo root = Django BASE_DIR
-├── config/                 # Django project (settings/urls/wsgi/asgi)
-├── accounts/               # users
-├── transmission/           # transmission-line master data + CSV import
-├── masterdata/             # Category / SubCategory taxonomy (data-driven)
-├── datasets/               # inspection upload module (models/views/utils/dedup)
-├── dashboard/              # user + staff dashboards
-├── reports/                # dataset export (ZIP + CSV/Excel)
-├── templates/  static/  media/
-├── manage.py  requirements.txt  transmission_data.csv
-└── ARCHITECTURE.md  README.md  .env.example
-```
+- Store media in S3-compatible object storage and serve signed URLs.
+- Export directly in YOLO format (images plus label files and `data.yaml`).
+- Detect near-duplicates with perceptual hashing (pHash), not just exact matches.
+- Add a REST API so the drone platform can pull approved datasets automatically.
